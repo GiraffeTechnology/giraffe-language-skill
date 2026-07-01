@@ -1,0 +1,56 @@
+version: "2026-07-01"
+
+zh_en:
+  格子: plaid
+  衬衫: shirt
+  衬衣: shirt
+  格子衬衫: plaid shirt
+  格子衬衣: plaid shirt
+  纯棉: cotton
+  白色: white
+  高品质: high quality
+  高质量: high quality
+  初步报价: preliminary quote
+  询价: inquiry
+  报价: quote
+  交东京: deliver to Tokyo
+  发东京: ship to Tokyo
+  运到东京: deliver to Tokyo
+  交大阪: deliver to Osaka
+  发大阪: ship to Osaka
+  运到大阪: deliver to Osaka
+  大货: bulk order
+  打样: sampling
+  面料: fabric
+  克重: gsm
+  色牢度: color fastness
+
+ja_en:
+  東京: Tokyo
+  大阪: Osaka
+  東京納品: deliver to Tokyo
+  大阪納品: deliver to Osaka
+  高品質: high quality
+  見積: quotation
+  納期: lead time
+  シャツ: shirt
+
+en_zh:
+  RFQ ready for approval: RFQ 已准备好审批
+  high-quality: 高品质
+  plaid shirts: 格子衬衫
+  supplier inquiry draft: 供应商询价草稿
+  supplier inquiry drafts: 供应商询价草稿
+  pending approval: 等待审批
+  preliminary quote: 初步报价
+  lead time: 交期
+  deadline risk: 交期风险
+
+en_ja:
+  RFQ ready for approval: RFQ は承認待ちです
+  high-quality: 高品質
+  plaid shirts: チェック柄シャツ
+  supplier inquiry draft: サプライヤー見積依頼ドラフト
+  pending approval: 承認待ち
+  preliminary quote: 概算見積
+  lead time: 納期
