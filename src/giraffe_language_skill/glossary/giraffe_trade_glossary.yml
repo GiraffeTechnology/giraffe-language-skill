@@ -54,10 +54,21 @@ zh_en:
   色牢度: color fastness
 
 ja_en:
+  チェック柄シャツ: plaid shirt
+  チェック柄: plaid
+  チェック: plaid
   東京: Tokyo
   大阪: Osaka
+  福岡: Fukuoka
   東京納品: deliver to Tokyo
   大阪納品: deliver to Osaka
+  福岡納品: deliver to Fukuoka
+  福岡へ発送: ship to Fukuoka
+  福岡に発送: ship to Fukuoka
+  福岡へ配送: deliver to Fukuoka
+  福岡に配送: deliver to Fukuoka
+  福岡へ納品: deliver to Fukuoka
+  福岡に納品: deliver to Fukuoka
   高品質: high quality
   見積: quotation
   納期: lead time

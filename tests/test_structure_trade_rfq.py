@@ -1,5 +1,6 @@
 ZH_RFQ = "询价 5000 件格子衬衫，45天交东京，高品质，请给我一个初步报价"
 EN_RFQ = "Inquiry: Order 5000 plaid shirts, to be shipped to Osaka within 45 days."
+JA_FUKUOKA_RFQ = "お問い合わせ：チェック柄シャツ5000枚を注文し、45日以内に福岡へ発送してください。"
 
 
 def test_structure_zh_rfq(client):
@@ -59,6 +60,24 @@ def test_structure_en_rfq(client):
     assert s["destination"] == "Osaka"
     assert s["lead_time_days"] == 45
     assert resp.json()["validation_status"] == "valid"
+
+
+def test_structure_ja_fukuoka_destination(client):
+    resp = client.post(
+        "/v1/structure/rfq",
+        json={"raw_text": JA_FUKUOKA_RFQ, "schema_version": "trade_rfq.v1"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["validation_status"] == "valid"
+
+    s = body["structured"]
+    assert s["quantity"] == 5000
+    assert s["quantity_unit"] == "pcs"
+    assert s["product_name"] == "plaid shirt"
+    assert s["destination"] == "Fukuoka"
+    assert s["lead_time_days"] == 45
+    assert body["missing_fields"] == []
 
 
 def test_structure_english_shipped_to_singapore_destination(client):

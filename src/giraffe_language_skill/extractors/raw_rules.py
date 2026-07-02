@@ -21,6 +21,8 @@ CITY_TOKENS: dict[str, str] = {
     "东京": "Tokyo",
     "東京": "Tokyo",
     "大阪": "Osaka",
+    "福岡": "Fukuoka",
+    "福冈": "Fukuoka",
     "洛杉矶": "Los Angeles",
     "洛杉磯": "Los Angeles",
     "新加坡": "Singapore",
@@ -30,6 +32,7 @@ CITY_TOKENS: dict[str, str] = {
     "溫哥華": "Vancouver",
     "tokyo": "Tokyo",
     "osaka": "Osaka",
+    "fukuoka": "Fukuoka",
     "los angeles": "Los Angeles",
     "singapore": "Singapore",
     "london": "London",
@@ -77,6 +80,15 @@ DELIVERY_PHRASES: dict[str, str] = {
     "溫哥華交貨": "Vancouver",
     "東京納品": "Tokyo",
     "大阪納品": "Osaka",
+    "福岡納品": "Fukuoka",
+    "福岡へ発送": "Fukuoka",
+    "福岡に発送": "Fukuoka",
+    "福岡へ配送": "Fukuoka",
+    "福岡に配送": "Fukuoka",
+    "福岡へ納品": "Fukuoka",
+    "福岡に納品": "Fukuoka",
+    "福冈发货": "Fukuoka",
+    "福冈交货": "Fukuoka",
 }
 
 _DESTINATION_NAME = (
