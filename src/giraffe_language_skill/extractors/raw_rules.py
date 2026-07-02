@@ -40,6 +40,19 @@ DELIVERY_PHRASES: dict[str, str] = {
     "大阪納品": "Osaka",
 }
 
+_DESTINATION_NAME = (
+    r"(?P<dest>(?:[A-Z][A-Za-z]*|[A-Z]{2,4})(?:[ -](?:[A-Z][A-Za-z]*|[A-Z]{2,4})){0,3})"
+)
+_DESTINATION_BOUNDARY = r"(?=\s*(?:within|in|by|,|\.|;|$|\d))"
+_DESTINATION_PHRASE_RE = [
+    re.compile(rf"(?i:\bto\s+be\s+(?:shipped|delivered)\s+to\s+){_DESTINATION_NAME}{_DESTINATION_BOUNDARY}"),
+    re.compile(rf"(?i:\b(?:ship|shipped|shipping|deliver|delivered|delivery)\s+(?:to|into)\s+){_DESTINATION_NAME}{_DESTINATION_BOUNDARY}"),
+    re.compile(rf"(?i:\bdestination\s*[:=]?\s+){_DESTINATION_NAME}{_DESTINATION_BOUNDARY}"),
+    re.compile(rf"(?i:\b(?:DDP|DAP|FOB|CIF)\s+to\s+){_DESTINATION_NAME}{_DESTINATION_BOUNDARY}"),
+    re.compile(rf"(?i:\bto\s+){_DESTINATION_NAME}(?i:\s+(?:within|in|by)\s+\d+)"),
+]
+_DESTINATION_FALSE_POSITIVES = {"be", "within", "days", "day", "pcs", "pieces", "units"}
+
 # --------------------------------------------------------------------------
 # Chinese numerals
 # --------------------------------------------------------------------------
@@ -138,6 +151,15 @@ def _extract_quantity(
     )
 
 
+def _canonical_destination_phrase(value: str) -> str | None:
+    cleaned = value.strip(" .,;:()[]{}\n\t")
+    if not cleaned:
+        return None
+    if cleaned.lower() in _DESTINATION_FALSE_POSITIVES:
+        return None
+    return cleaned.upper() if cleaned.isupper() and len(cleaned) <= 4 else cleaned.title()
+
+
 def _extract_destination(text: str) -> FieldEvidence | None:
     # Delivery phrases first (they carry an explicit "deliver to" intent).
     for phrase, city in DELIVERY_PHRASES.items():
@@ -145,6 +167,20 @@ def _extract_destination(text: str) -> FieldEvidence | None:
             return FieldEvidence(
                 value=city, source="raw_rule+glossary", span=phrase, confidence=1.0
             )
+
+    for pattern in _DESTINATION_PHRASE_RE:
+        match = pattern.search(text)
+        if not match:
+            continue
+        destination = _canonical_destination_phrase(match.group("dest"))
+        if destination:
+            return FieldEvidence(
+                value=destination,
+                source="raw_rule",
+                span=match.group("dest").strip(),
+                confidence=0.92,
+            )
+
     lowered = text.lower()
     for token, city in CITY_TOKENS.items():
         needle = token.lower()

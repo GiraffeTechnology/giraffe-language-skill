@@ -38,3 +38,16 @@ def test_structure_en_rfq(client):
     assert s["destination"] == "Osaka"
     assert s["lead_time_days"] == 45
     assert resp.json()["validation_status"] == "valid"
+
+
+def test_structure_english_shipped_to_singapore_destination(client):
+    text = "Inquiry: Order 5000 plaid shirts, to be shipped to Singapore within 45 days."
+    resp = client.post(
+        "/v1/structure/rfq",
+        json={"raw_text": text, "canonical_text": text},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["validation_status"] == "valid"
+    assert body["structured"]["destination"] == "Singapore"
+    assert body["missing_fields"] == []
