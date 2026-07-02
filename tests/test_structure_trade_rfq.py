@@ -25,6 +25,27 @@ def test_structure_zh_rfq(client):
     assert body["missing_fields"] == []
 
 
+def test_structure_zh_los_angeles_destination(client):
+    resp = client.post(
+        "/v1/structure/rfq",
+        json={
+            "raw_text": "询价5000件格子衬衫，45天交洛杉矶，高品质，请给我一个初步报价",
+            "schema_version": "trade_rfq.v1",
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["validation_status"] == "valid"
+
+    s = body["structured"]
+    assert s["quantity"] == 5000
+    assert s["product_name"] == "plaid shirt"
+    assert s["destination"] == "Los Angeles"
+    assert s["lead_time_days"] == 45
+    assert s["quality_level"] == "high"
+    assert body["missing_fields"] == []
+
+
 def test_structure_en_rfq(client):
     resp = client.post(
         "/v1/structure/rfq",

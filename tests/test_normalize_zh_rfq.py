@@ -34,3 +34,27 @@ def test_normalize_zh_rfq(client):
 
     assert body["translation"]["provider"] == "mock"
     assert body["translation"]["glossary_version"] == "2026-07-01"
+
+
+def test_normalize_zh_los_angeles_destination(client):
+    resp = client.post(
+        "/v1/inbound/normalize",
+        json={
+            "source_text": "询价5000件格子衬衫，45天交洛杉矶，高品质，请给我一个初步报价",
+            "source_language": "auto",
+            "canonical_language": "en",
+            "domain_hint": "trade_rfq",
+            "source_channel": "wechat",
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+
+    ev = body["field_evidence"]
+    assert ev["destination"]["value"] == "Los Angeles"
+    assert ev["destination"]["source"] == "raw_rule+glossary"
+    assert ev["quantity"]["value"] == 5000
+    assert ev["lead_time_days"]["value"] == 45
+    assert ev["quality_level"]["value"] == "high"
+
+    assert "Los Angeles" in body["canonical_text"]
