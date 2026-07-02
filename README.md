@@ -1,165 +1,204 @@
-# giraffe-language-skill
+# giraffe-language-skill — P0 Canonical Language Boundary
 
-**Giraffe Language Skill Layer** — a standalone multilingual canonicalization,
-deterministic extraction, and local translation service for Giraffe products
-(AIVAN, abcdYi, giraffe-agent).
+`Canonical English` | `Pre-workflow Skill Layer` | `Multilingual Input Normalization` | `Localized Output Rendering` | `Shared Giraffe Infrastructure`
 
-It converts multilingual IM / email / private-domain business messages into
-**canonical English business packets**, applies deterministic extraction and
-Giraffe domain-glossary normalization, supports local CTranslate2 + OPUS-MT /
-Marian translation, and renders outbound canonical packets back into the
-recipient's target language.
+`giraffe-language-skill` is the shared language boundary for Giraffe Technology products.
 
-## What it is
+It converts raw multilingual operator, buyer, supplier, QC, IM, email, and marketplace text into **canonical English business packets** before any product workflow performs extraction, routing, GLTG simulation, Giraffe DB writes, QC test-point generation, decision-packet creation, or outbound draft generation.
 
-- a language canonicalization service
-- a deterministic extraction layer
-- a multilingual structuring service
-- a local translation service
-- a **pre-LLM skill layer**
+This repository is not an optional helper. It is a P0 architecture layer.
 
-## What it is not
+---
 
-- not an agent, chatbot, RFQ execution engine, or pricing engine
-- not a GLTG client or an OpenClaw connector
-- not a replacement for human approval
+## P0 Global Rule
 
-This service is **shared infrastructure**. It must not be embedded separately
-inside AIVAN, abcdYi, or giraffe-agent.
+```text
+Standard English is the only internal working language across Giraffe products.
 
-## Why canonical English exists
+All raw multilingual input must pass through giraffe-language-skill before product workflow.
 
-The CTYUN AIVAN test showed that a small local LLM (`qwen3.5:0.8b`) cannot
-reliably extract structured business fields from non-English input. For example
-it dropped `destination = Tokyo`, `product modifier = plaid`, and
-`quality level = high` from:
-
-```
-询价 5000 件格子衬衫，45天交东京，高品质，请给我一个初步报价
+After internal work is complete, user-facing output is localized into the target language requested by the user.
 ```
 
-Therefore explicit business facts are never extracted by a small LLM. The
-architecture is deterministic-first:
+Any implementation that bypasses this rule is invalid.
 
-```
-raw multilingual text
-  → deterministic raw extraction        (quantities, cities, lead times…)
-  → local translation to canonical EN   (CTranslate2 / OPUS-MT, or mock)
-  → glossary normalization              (Giraffe domain terms)
-  → domain-specific structuring         (trade RFQ / apparel customization)
-  → validation gate                     (valid / needs_confirmation / …)
-  → canonical English packet            → product workflow
-```
+---
 
-LLMs may be used later only for low-risk normalization, explanation, or draft
-polishing — never as the source of truth for explicit business facts.
+## Why This Exists
 
-## Production workflow
+Giraffe products operate across Chinese, English, Japanese, and other trade languages. AIVAN, abcdYi, giraffe-agent, giraffe-db, GLTG, and QC workflows must not each invent their own translation prompts, city aliases, SKU maps, product maps, material maps, or multilingual extraction shortcuts.
 
-```
-Inbound IM / Email / Approved Private-Domain Channel
-  → OpenClaw Gateway
-  → AIVAN / abcdYi / giraffe-agent
-  → giraffe-language-skill API
-  → canonical English business packet
-  → product-specific DB / workflow
-  → canonical English outbound packet
-  → giraffe-language-skill API
-  → target-language rendered message
-  → OpenClaw Gateway
-  → IM / Email recipient
+Without a shared language boundary, the same raw phrase can produce different product, destination, quality, lead-time, or supplier-routing facts in different repositories.
+
+The solution is a single canonical path:
+
+```text
+raw multilingual message
+-> language detection
+-> canonical English normalization
+-> deterministic business-field extraction where safe
+-> domain-glossary normalization
+-> structured canonical packet
+-> validation gate
+-> downstream product workflow
+-> localized user-facing output
 ```
 
-## Install
+---
 
-Requires Python 3.11+. Uses [uv](https://docs.astral.sh/uv/).
+## What This Repository Owns
 
-```bash
-uv venv --python 3.11
-uv pip install -e ".[dev]"
+`giraffe-language-skill` owns:
+
+```text
+language detection
+canonical English normalization
+multilingual RFQ canonicalization
+multilingual QC requirement canonicalization
+safe deterministic extraction for explicit fields
+Giraffe domain glossary normalization
+canonical packet schemas
+language metadata
+localized output rendering
+validation gates for ambiguous input
+static guard policy for product repositories
 ```
 
-The default translation provider is `mock`, so the API and the full test suite
-run **without any model downloads or network access**.
+---
 
-## Run locally
+## What This Repository Does Not Own
 
-```bash
-cp .env.example .env
-uv run python -m giraffe_language_skill.api.main --host 127.0.0.1 --port 8788
+It does not own:
+
+```text
+AIVAN RFQ execution
+GLTG lead-time simulation
+giraffe-db persistence
+GPM procurement path reasoning
+QC visual inspection
+OpenClaw channel connectivity
+commercial approval
+legal responsibility
 ```
 
-Then:
+Language normalization happens before those systems run. It does not replace them.
 
-```bash
-curl -s localhost:8788/healthz
-curl -s localhost:8788/v1/models
+---
+
+## Required Downstream Contract
+
+Every relevant Giraffe product must follow this rule:
+
+```text
+if input_language != English:
+    call giraffe-language-skill
+    require a valid canonical English packet
+    block product workflow if canonicalization fails
+else:
+    local English workflow may continue
 ```
 
-## API examples
+Downstream products must consume:
 
-Inbound normalize (Chinese RFQ → canonical English + field evidence):
-
-```bash
-curl -s localhost:8788/v1/inbound/normalize -H 'content-type: application/json' -d '{
-  "source_text": "询价 5000 件格子衬衫，45天交东京，高品质，请给我一个初步报价",
-  "source_language": "auto",
-  "canonical_language": "en",
-  "domain_hint": "trade_rfq"
-}'
+```text
+canonical_english_text
+canonical_business_packet
+detected_language
+requested_output_language
+final_output_language
+source_conversation_language
+confidence
+needs_confirmation
+questions
 ```
 
-Structure a trade RFQ:
+Localized output is never the internal source of truth. The canonical English packet is the audit source.
 
-```bash
-curl -s localhost:8788/v1/structure/rfq -H 'content-type: application/json' -d '{
-  "raw_text": "询价 5000 件格子衬衫，45天交东京，高品质，请给我一个初步报价"
-}'
+---
+
+## AIVAN Enforcement
+
+AIVAN does not own multilingual RFQ extraction.
+
+For non-English RFQ input:
+
+```text
+giraffe-language-skill must normalize raw text into canonical English.
+giraffe-language-skill must produce the structured RFQ packet.
+AIVAN must not call its requirement LLM with raw non-English business text.
+AIVAN must not run deterministic fallback extraction over raw non-English business text.
+AIVAN must not infer product, category, destination, material, quality, supplier capability, price, or lead time from raw non-English text.
+If language-skill cannot produce a valid packet, AIVAN must block extraction and ask for confirmation.
 ```
 
-Render an outbound Chinese message from canonical English:
+GLTG, supplier routing, Giraffe DB graph writes, and outbound draft creation must not run from raw non-English input.
 
-```bash
-curl -s localhost:8788/v1/outbound/render -H 'content-type: application/json' -d '{
-  "target_language": "zh",
-  "target_channel": "wechat",
-  "message_type": "rfq_status_update",
-  "canonical_text": "RFQ ready for approval: 5000 pcs high-quality plaid shirts to Tokyo within 45 days. Two supplier inquiry drafts are pending approval."
-}'
+---
+
+## Prohibited in Product Repositories
+
+Product repositories must not add:
+
+```text
+internal RFQ translation prompts
+multilingual city alias maps
+destination alias maps
+product alias maps
+SKU alias maps
+material alias maps
+quality alias maps
+supplier alias or capability maps
+category keyword maps
+raw non-English field extraction paths that bypass giraffe-language-skill
+LLM extraction directly from raw non-English business text
 ```
 
-Full request/response schemas: [docs/API_CONTRACT.md](docs/API_CONTRACT.md).
+Those rules belong here, in canonical resolver services, or in Giraffe DB canonical data layers.
 
-## Tests
+---
 
-```bash
-uv run pytest -q
+## Required Tests
+
+Each relevant product repo must include tests proving:
+
+1. Non-English input calls `giraffe-language-skill` before business extraction.
+2. Non-English input without a valid canonical packet is blocked.
+3. Local LLM does not receive raw non-English business text.
+4. Deterministic fallback does not canonicalize raw non-English product, destination, category, material, quality, or supplier information.
+5. Final user-facing output is localized into the requested target language.
+6. Canonical English internal state is preserved separately from localized output.
+7. Static guards fail if product repos add multilingual business-semantic alias maps.
+
+---
+
+## Ecosystem Role
+
+```text
+giraffe-language-skill = language boundary
+giraffe-db             = private business fact layer
+GLTG                   = lead-time simulation layer
+GPM                    = procurement graph reasoning layer
+AIVAN                  = trade execution worker
+giraffe-agent          = open-core orchestration reference
+abcdYi / Giraffe-JP    = industry / deployment applications
+giraffe-qc-model       = visual QC intelligence
+OpenClaw               = channel runtime
 ```
 
-Tests use the deterministic `mock` provider only — no network, no model weights.
+---
 
-## Model setup ⚠️
+## Final Required Statement
 
-**Model weights are not bundled with this repository and must not be
-committed.** OPUS-MT / Marian / CTranslate2 weights remain governed by their
-upstream licenses. Only download + conversion scripts are provided:
+P0 Global Rule Enforced:
 
-- `scripts/download_opus_mt_models.py`
-- `scripts/convert_models_to_ctranslate2.py`
-- `scripts/smoke_translate.py`
+```text
+Standard English is the only internal working language across Giraffe products.
+All raw multilingual input must pass through giraffe-language-skill before product workflow.
+After internal work is complete, user-facing output is localized into the target language requested by the user.
+```
 
-See [docs/MODEL_SETUP.md](docs/MODEL_SETUP.md) to enable the real CTranslate2
-backend (`GIRAFFE_TRANSLATION_PROVIDER=ctranslate2`).
-
-## Documentation
-
-- [docs/API_CONTRACT.md](docs/API_CONTRACT.md) — endpoints and schemas
-- [docs/MODEL_SETUP.md](docs/MODEL_SETUP.md) — download, convert, enable CTranslate2
-- [docs/GLOSSARY_POLICY.md](docs/GLOSSARY_POLICY.md) — glossary versioning and policy
-- [docs/INTEGRATION_AIVAN_ABCDYI_GIRAFFE_AGENT.md](docs/INTEGRATION_AIVAN_ABCDYI_GIRAFFE_AGENT.md)
-  — how each product calls the service
+---
 
 ## License
 
-Apache License 2.0. See [LICENSE](LICENSE) and
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+See `LICENSE`.
