@@ -21,8 +21,22 @@ CITY_TOKENS: dict[str, str] = {
     "东京": "Tokyo",
     "東京": "Tokyo",
     "大阪": "Osaka",
+    "福岡": "Fukuoka",
+    "福冈": "Fukuoka",
+    "洛杉矶": "Los Angeles",
+    "洛杉磯": "Los Angeles",
+    "新加坡": "Singapore",
+    "伦敦": "London",
+    "倫敦": "London",
+    "温哥华": "Vancouver",
+    "溫哥華": "Vancouver",
     "tokyo": "Tokyo",
     "osaka": "Osaka",
+    "fukuoka": "Fukuoka",
+    "los angeles": "Los Angeles",
+    "singapore": "Singapore",
+    "london": "London",
+    "vancouver": "Vancouver",
 }
 
 # Delivery phrases that also assert a destination. When one of these matches we
@@ -36,9 +50,83 @@ DELIVERY_PHRASES: dict[str, str] = {
     "发大阪": "Osaka",
     "运到大阪": "Osaka",
     "大阪交货": "Osaka",
+    "交洛杉矶": "Los Angeles",
+    "发洛杉矶": "Los Angeles",
+    "运到洛杉矶": "Los Angeles",
+    "洛杉矶交货": "Los Angeles",
+    "交洛杉磯": "Los Angeles",
+    "发洛杉磯": "Los Angeles",
+    "運到洛杉磯": "Los Angeles",
+    "洛杉磯交貨": "Los Angeles",
+    "交新加坡": "Singapore",
+    "发新加坡": "Singapore",
+    "运到新加坡": "Singapore",
+    "新加坡交货": "Singapore",
+    "交伦敦": "London",
+    "发伦敦": "London",
+    "运到伦敦": "London",
+    "伦敦交货": "London",
+    "交倫敦": "London",
+    "发倫敦": "London",
+    "運到倫敦": "London",
+    "倫敦交貨": "London",
+    "交温哥华": "Vancouver",
+    "发温哥华": "Vancouver",
+    "运到温哥华": "Vancouver",
+    "温哥华交货": "Vancouver",
+    "交溫哥華": "Vancouver",
+    "发溫哥華": "Vancouver",
+    "運到溫哥華": "Vancouver",
+    "溫哥華交貨": "Vancouver",
     "東京納品": "Tokyo",
     "大阪納品": "Osaka",
+    "福岡納品": "Fukuoka",
+    "福岡へ発送": "Fukuoka",
+    "福岡に発送": "Fukuoka",
+    "福岡へ配送": "Fukuoka",
+    "福岡に配送": "Fukuoka",
+    "福岡へ納品": "Fukuoka",
+    "福岡に納品": "Fukuoka",
+    "福冈发货": "Fukuoka",
+    "福冈交货": "Fukuoka",
 }
+
+# Destination token. Case-insensitive so lowercase free text ("shipped to
+# rotterdam", "destination: singapore") still resolves; the surrounding phrase
+# supplies the shipping intent and ``_canonical_destination_phrase`` restores
+# canonical casing.
+# Lazy multi-word quantifier so the trailing boundary word ("within"/"in"/"by")
+# is not absorbed into the destination once matching is case-insensitive, while
+# genuine multi-word names ("Los Angeles") still extend as needed.
+_DESTINATION_NAME = r"(?P<dest>[A-Za-z]+(?:[ -][A-Za-z]+){0,3}?)"
+_DESTINATION_BOUNDARY = r"(?=\s*(?:within|in|by|,|\.|;|$|\d))"
+# Strong phrases: each carries explicit ship/deliver/destination wording, so the
+# following token is safe to treat as a destination.
+_DESTINATION_PHRASE_RE = [
+    re.compile(rf"(?i:\bto\s+be\s+(?:shipped|delivered)\s+to\s+){_DESTINATION_NAME}{_DESTINATION_BOUNDARY}"),
+    re.compile(rf"(?i:\b(?:ship|shipped|shipping|deliver|delivered|delivery)\s+(?:to|into)\s+){_DESTINATION_NAME}{_DESTINATION_BOUNDARY}"),
+    re.compile(rf"(?i:\bdestination\s*[:=]?\s+){_DESTINATION_NAME}{_DESTINATION_BOUNDARY}"),
+    re.compile(rf"(?i:\b(?:DDP|DAP|FOB|CIF)\s+to\s+){_DESTINATION_NAME}{_DESTINATION_BOUNDARY}"),
+]
+# Weak fallback: a bare "to <Name> within/in/by <n>" is ambiguous with a
+# recipient ("quote to Buyer within 3 days"), so it only asserts a destination
+# when the wider text also carries explicit shipping/delivery intent.
+_DESTINATION_FALLBACK_RE = re.compile(
+    rf"(?i:\bto\s+){_DESTINATION_NAME}(?i:\s+(?:within|in|by)\s+\d+)"
+)
+_DELIVERY_INTENT_RE = re.compile(
+    r"(?i)\b(?:ship|shipped|shipping|deliver|delivered|delivery|dispatch|dispatched|"
+    r"freight|logistics|consign|consigned|destination|export|exported)\b"
+)
+# Tokens that may follow the phrase prefixes but never name a shipping
+# destination (measurement words, pronouns, and recipient nouns). Matched on the
+# first word so multi-word recipients ("the buyer", "our customer") are rejected.
+_DESTINATION_STOPWORDS = frozenset({
+    "be", "within", "in", "by", "days", "day", "pcs", "pieces", "units",
+    "me", "you", "us", "him", "her", "them", "it",
+    "the", "a", "an", "our", "your", "their", "his", "its", "this", "that",
+    "buyer", "seller", "customer", "client", "recipient", "consignee",
+})
 
 # --------------------------------------------------------------------------
 # Chinese numerals
@@ -138,6 +226,15 @@ def _extract_quantity(
     )
 
 
+def _canonical_destination_phrase(value: str) -> str | None:
+    cleaned = value.strip(" .,;:()[]{}\n\t")
+    if not cleaned:
+        return None
+    if cleaned.split()[0].lower() in _DESTINATION_STOPWORDS:
+        return None
+    return cleaned.upper() if cleaned.isupper() and len(cleaned) <= 4 else cleaned.title()
+
+
 def _extract_destination(text: str) -> FieldEvidence | None:
     # Delivery phrases first (they carry an explicit "deliver to" intent).
     for phrase, city in DELIVERY_PHRASES.items():
@@ -145,6 +242,34 @@ def _extract_destination(text: str) -> FieldEvidence | None:
             return FieldEvidence(
                 value=city, source="raw_rule+glossary", span=phrase, confidence=1.0
             )
+
+    for pattern in _DESTINATION_PHRASE_RE:
+        match = pattern.search(text)
+        if not match:
+            continue
+        destination = _canonical_destination_phrase(match.group("dest"))
+        if destination:
+            return FieldEvidence(
+                value=destination,
+                source="raw_rule",
+                span=match.group("dest").strip(),
+                confidence=0.92,
+            )
+
+    # Weak fallback only fires when the text carries explicit shipping intent,
+    # so a bare "to <recipient> within <n>" cannot masquerade as a destination.
+    if _DELIVERY_INTENT_RE.search(text):
+        match = _DESTINATION_FALLBACK_RE.search(text)
+        if match:
+            destination = _canonical_destination_phrase(match.group("dest"))
+            if destination:
+                return FieldEvidence(
+                    value=destination,
+                    source="raw_rule",
+                    span=match.group("dest").strip(),
+                    confidence=0.85,
+                )
+
     lowered = text.lower()
     for token, city in CITY_TOKENS.items():
         needle = token.lower()

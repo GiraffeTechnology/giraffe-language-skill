@@ -19,6 +19,34 @@ zh_en:
   交大阪: deliver to Osaka
   发大阪: ship to Osaka
   运到大阪: deliver to Osaka
+  交洛杉矶: deliver to Los Angeles
+  发洛杉矶: ship to Los Angeles
+  运到洛杉矶: deliver to Los Angeles
+  洛杉矶: Los Angeles
+  交洛杉磯: deliver to Los Angeles
+  发洛杉磯: ship to Los Angeles
+  運到洛杉磯: deliver to Los Angeles
+  洛杉磯: Los Angeles
+  交新加坡: deliver to Singapore
+  发新加坡: ship to Singapore
+  运到新加坡: deliver to Singapore
+  新加坡: Singapore
+  交伦敦: deliver to London
+  发伦敦: ship to London
+  运到伦敦: deliver to London
+  伦敦: London
+  交倫敦: deliver to London
+  发倫敦: ship to London
+  運到倫敦: deliver to London
+  倫敦: London
+  交温哥华: deliver to Vancouver
+  发温哥华: ship to Vancouver
+  运到温哥华: deliver to Vancouver
+  温哥华: Vancouver
+  交溫哥華: deliver to Vancouver
+  发溫哥華: ship to Vancouver
+  運到溫哥華: deliver to Vancouver
+  溫哥華: Vancouver
   大货: bulk order
   打样: sampling
   面料: fabric
@@ -26,10 +54,21 @@ zh_en:
   色牢度: color fastness
 
 ja_en:
+  チェック柄シャツ: plaid shirt
+  チェック柄: plaid
+  チェック: plaid
   東京: Tokyo
   大阪: Osaka
+  福岡: Fukuoka
   東京納品: deliver to Tokyo
   大阪納品: deliver to Osaka
+  福岡納品: deliver to Fukuoka
+  福岡へ発送: ship to Fukuoka
+  福岡に発送: ship to Fukuoka
+  福岡へ配送: deliver to Fukuoka
+  福岡に配送: deliver to Fukuoka
+  福岡へ納品: deliver to Fukuoka
+  福岡に納品: deliver to Fukuoka
   高品質: high quality
   見積: quotation
   納期: lead time
