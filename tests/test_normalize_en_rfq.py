@@ -39,3 +39,52 @@ def test_normalize_english_shipped_to_singapore_destination(client):
     assert resp.status_code == 200
     body = resp.json()
     assert body["field_evidence"]["destination"]["value"] == "Singapore"
+
+
+def test_normalize_english_lowercase_generic_destination(client):
+    # Lowercase, non-glossary city: resolves via the case-insensitive phrase
+    # rules, not the known-city token table.
+    resp = client.post(
+        "/v1/inbound/normalize",
+        json={
+            "source_text": "Inquiry: Order 5000 plaid shirts, to be shipped to rotterdam within 45 days.",
+            "source_language": "auto",
+            "canonical_language": "en",
+            "domain_hint": "trade_rfq",
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["field_evidence"]["destination"]["value"] == "Rotterdam"
+
+
+def test_normalize_english_destination_label_lowercase(client):
+    resp = client.post(
+        "/v1/inbound/normalize",
+        json={
+            "source_text": "Order 5000 plaid shirts within 45 days. destination: rotterdam",
+            "source_language": "auto",
+            "canonical_language": "en",
+            "domain_hint": "trade_rfq",
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["field_evidence"]["destination"]["value"] == "Rotterdam"
+
+
+def test_normalize_english_far_verb_fallback_destination(client):
+    # No adjacent "ship/deliver to" phrase, but explicit shipping intent is
+    # present, so the guarded "to <city> within <n>" fallback still fires.
+    resp = client.post(
+        "/v1/inbound/normalize",
+        json={
+            "source_text": "We will deliver the 5000 plaid shirts to rotterdam within 30 days.",
+            "source_language": "auto",
+            "canonical_language": "en",
+            "domain_hint": "trade_rfq",
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["field_evidence"]["destination"]["value"] == "Rotterdam"
